@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>橋</title>
+<style>
+  :root{
+    --sky-top:#8fb0c4;
+    --sky-bot:#d9d2bd;
+    --rock:#6f6455;
+    --rock-dark:#4a4238;
+    --rock-face:#857a68;
+    --deep:#2e2a24;
+    --wood:#a9784a;
+    --wood-dark:#7c5331;
+    --ink:#241f1a;
+    --ink-dim:#6b6257;
+    --paper:#f4efe3;
+    box-sizing:border-box;
+    padding-top:env(safe-area-inset-top,0px);
+    padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  *,*::before,*::after{box-sizing:inherit}
+  html,body{height:100%;margin:0}
+  body{
+    background:var(--deep);color:var(--ink);
+    font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;
+    -webkit-font-smoothing:antialiased;overflow:hidden;
+    -webkit-user-select:none;user-select:none;
+  }
+  .wrap{height:100%;display:grid;grid-template-rows:auto 1fr auto}
+
+  .bar{
+    padding:10px 14px;font-size:12px;letter-spacing:.08em;
+    display:flex;justify-content:space-between;align-items:center;
+    background:var(--deep);color:#cfc6b6;
+  }
+  .who{font-weight:700;color:var(--paper)}
+  .link{font-size:11px;color:#9d9384}
+  .link b{color:#e8c98a;font-weight:400}
+
+  /* ---------- 風景 ---------- */
+  .scene{position:relative;overflow:hidden;background:linear-gradient(180deg,var(--sky-top) 0%,var(--sky-bot) 78%)}
+  .scene.mirror .flip{transform:scaleX(-1)}
+  .flip{position:absolute;inset:0}
+
+  .cliff{position:absolute;bottom:0;height:62%;background:
+    linear-gradient(180deg,var(--rock-face) 0%,var(--rock) 26%,var(--rock-dark) 100%)}
+  .cliff.l{left:0;width:31%;border-radius:0 6px 0 0}
+  .cliff.r{right:0;width:31%;border-radius:6px 0 0 0}
+  .road{position:absolute;bottom:62%;height:11px;background:#555049;box-shadow:inset 0 2px 0 rgba(255,255,255,.14)}
+  .road.l{left:0;width:31%}
+  .road.r{right:0;width:31%}
+  .gorge{position:absolute;left:31%;right:31%;bottom:0;top:38%;
+    background:linear-gradient(180deg,rgba(46,42,36,.15),rgba(46,42,36,.9) 70%)}
+
+  .plank{
+    position:absolute;bottom:62%;height:11px;
+    background:linear-gradient(180deg,var(--wood) 0%,var(--wood-dark) 100%);
+    box-shadow:0 2px 0 rgba(0,0,0,.3);
+    opacity:0;transform:translateY(-26px) rotate(-10deg);
+    transition:opacity .35s ease, transform .5s cubic-bezier(.3,1.4,.5,1);
+  }
+  .plank.on{opacity:1;transform:none}
+  .plank.p0{left:31%;width:12.7%}
+  .plank.p1{left:43.6%;width:12.7%}
+  .plank.p2{left:56.2%;width:12.8%}
+
+  .car{
+    position:absolute;bottom:calc(62% + 11px);left:12%;width:44px;height:22px;
+    transition:left 2.4s cubic-bezier(.4,0,.5,1);
+  }
+  .car .bodyc{position:absolute;inset:6px 0 0 0;border-radius:5px 7px 3px 3px;background:#c9483c;box-shadow:inset 0 -4px 0 rgba(0,0,0,.18)}
+  .car .cab{position:absolute;left:9px;top:0;width:20px;height:9px;border-radius:5px 5px 0 0;background:#d9695e}
+  .car .w{position:absolute;bottom:-3px;width:9px;height:9px;border-radius:50%;background:#2b2724}
+  .car .w1{left:5px}.car .w2{right:5px}
+  .car.shake{animation:shake .4s ease}
+  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
+  .car.hidden{display:none}
+
+  /* B側の板置き場 */
+  .stack{position:absolute;right:4%;bottom:calc(62% + 11px);display:flex;flex-direction:column-reverse;gap:4px}
+  .stack .item{
+    width:58px;height:11px;border-radius:2px;
+    background:linear-gradient(180deg,var(--wood) 0%,var(--wood-dark) 100%);
+    box-shadow:0 2px 0 rgba(0,0,0,.3);cursor:pointer;
+  }
+  .stack .item:active{transform:translateY(2px)}
+  .stack.hidden{display:none}
+
+  /* ---------- 下部 ---------- */
+  .panel{padding:14px;background:var(--paper);display:flex;flex-direction:column;gap:11px;align-items:center}
+  .msg{margin:0;font-size:14px;font-weight:700;line-height:1.7;text-align:center;letter-spacing:.03em}
+  .msg span{display:block;font-size:12px;font-weight:400;color:var(--ink-dim);margin-top:4px}
+  .row{display:flex;gap:9px;flex-wrap:wrap;justify-content:center}
+  button{
+    font-family:inherit;font-size:13px;font-weight:700;letter-spacing:.08em;
+    background:var(--ink);color:var(--paper);border:none;border-radius:999px;padding:11px 22px;cursor:pointer;
+  }
+  button.sub{background:none;color:var(--ink-dim);border:1px solid rgba(0,0,0,.2)}
+  button:active{transform:scale(.97)}
+  button:focus-visible{outline:2px solid #c9483c;outline-offset:3px}
+  .hidden{display:none}
+  .status{font-size:11px;color:var(--ink-dim);letter-spacing:.06em}
+  .status.bad{color:#b0392c}
+  .btnlink{
+    font-size:13px;font-weight:700;letter-spacing:.08em;text-decoration:none;
+    background:var(--ink);color:var(--paper);border-radius:999px;padding:11px 22px;display:inline-block;
+  }
+  .urlbox{display:flex;flex-direction:column;gap:7px;align-items:center;width:100%}
+  .urltxt{
+    width:100%;max-width:420px;font:11px/1.5 ui-monospace,Menlo,monospace;
+    color:var(--ink-dim);background:rgba(0,0,0,.05);border-radius:6px;padding:7px 9px;
+    word-break:break-all;text-align:center;-webkit-user-select:text;user-select:text;
+  }
+  .diag{
+    font:10px/1.6 ui-monospace,Menlo,monospace;color:var(--ink-dim);
+    text-align:center;max-width:460px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="bar">
+    <span class="who" id="who">こちら側</span>
+    <span class="link" id="conn">接続: <b>—</b></span>
+  </div>
+
+  <div class="scene" id="scene">
+    <div class="flip">
+      <div class="cliff l"></div><div class="cliff r"></div>
+      <div class="road l"></div><div class="road r"></div>
+      <div class="gorge"></div>
+      <div class="plank p0" id="pk0"></div>
+      <div class="plank p1" id="pk1"></div>
+      <div class="plank p2" id="pk2"></div>
+      <div class="car hidden" id="car">
+        <div class="bodyc"></div><div class="cab"></div>
+        <div class="w w1"></div><div class="w w2"></div>
+      </div>
+    </div>
+    <div class="stack hidden" id="stack"></div>
+  </div>
+
+  <div class="panel">
+    <p class="msg" id="msg">読み込み中</p>
+    <div class="row">
+      <a id="open" class="btnlink hidden" target="_blank" rel="noopener">向こう岸を開く</a>
+      <button id="reset" class="sub">最初から</button>
+    </div>
+    <div class="urlbox hidden" id="urlbox">
+      <div class="urltxt" id="urltxt"></div>
+      <button id="copy" class="sub">URLをコピー</button>
+    </div>
+    <div class="status" id="status"></div>
+    <div class="diag" id="diag"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const $=id=>document.getElementById(id);
+  const KEY='bridge:state', MSG='bridge:msg';
+  const params=new URLSearchParams(location.search);
+  const side = params.get('side')==='b' ? 'b' : 'a';
+
+  const scene=$('scene'), car=$('car'), stack=$('stack'), msg=$('msg'),
+        openBtn=$('open'), resetBtn=$('reset'), conn=$('conn'), status=$('status'), who=$('who');
+  const planks=[$('pk0'),$('pk1'),$('pk2')];
+
+  let st = load();
+  let partnerAt = 0;
+
+  function load(){
+    try{ const v=JSON.parse(localStorage.getItem(KEY)); if(v) return v; }catch(e){}
+    return {planks:0, crossed:false};
+  }
+  function save(){ try{ localStorage.setItem(KEY, JSON.stringify(st)); }catch(e){} }
+
+  // ---- タブ間通信 ----
+  let bc=null;
+  try{ bc = new BroadcastChannel('bridge'); }catch(e){}
+  function send(o){
+    o.from = side; o.t = Date.now();
+    if(bc) bc.postMessage(o);
+    try{ localStorage.setItem(MSG, JSON.stringify(o)); }catch(e){}
+  }
+  function onMsg(o){
+    if(!o || o.from === side) return;
+    partnerAt = Date.now();
+    if(o.type === 'state'){ st = o.state; save(); render(); }
+    if(o.type === 'cross'){ st.crossed = true; save(); render(); }
+  }
+  if(bc) bc.onmessage = e => onMsg(e.data);
+  window.addEventListener('storage', e=>{
+    if(e.key === MSG && e.newValue){ try{ onMsg(JSON.parse(e.newValue)); }catch(err){} }
+    if(e.key === KEY && e.newValue){ try{ st=JSON.parse(e.newValue); render(); }catch(err){} }
+  });
+
+  setInterval(()=>send({type:'ping'}), 1000);
+  setInterval(()=>{
+    const alive = Date.now() - partnerAt < 3000;
+    conn.innerHTML = '接続: <b>' + (alive ? '通じている' : '相手がいない') + '</b>';
+    status.classList.toggle('bad', !alive);
+    if(!alive && side==='a' && !st.crossed){
+      status.textContent = '向こう岸のタブが開かれていません';
+    }else if(alive){
+      status.textContent = '板 ' + st.planks + ' / 3';
+    }
+  }, 800);
+
+  // ---- 描画 ----
+  function render(){
+    planks.forEach((p,i)=>p.classList.toggle('on', i < st.planks));
+
+    if(side==='a'){
+      car.classList.remove('hidden');
+      if(st.crossed){
+        car.style.left = '78%';
+        msg.innerHTML = '車は渡っていった<span>向こう岸の誰かが橋をかけてくれた</span>';
+      }else if(st.planks >= 3){
+        msg.innerHTML = '橋がつながった<span>車をタップして渡らせる</span>';
+      }else{
+        car.style.left = '12%';
+        msg.innerHTML = '橋が落ちていて渡れない<span>向こう岸に板があるらしい</span>';
+      }
+    }else{
+      const left = 3 - st.planks;
+      stack.innerHTML = '';
+      for(let i=0;i<left;i++){
+        const it=document.createElement('div');
+        it.className='item';
+        it.addEventListener('click', place);
+        stack.appendChild(it);
+      }
+      stack.classList.toggle('hidden', left===0);
+      if(st.crossed){
+        car.classList.remove('hidden');
+        car.style.left = '78%';
+        msg.innerHTML = '車がこちらへ来た<span>向こうで待っていたらしい</span>';
+      }else if(left===0){
+        msg.innerHTML = '橋をかけ終えた<span>向こう岸で何かが動いているかもしれない</span>';
+      }else{
+        msg.innerHTML = '板が' + left + '枚ある<span>タップして谷に渡す</span>';
+      }
+    }
+  }
+
+  function place(){
+    if(st.planks >= 3) return;
+    st.planks++; save(); send({type:'state', state:st}); render();
+  }
+
+  car.addEventListener('click', ()=>{
+    if(side!=='a') return;
+    if(st.planks < 3){ car.classList.remove('shake'); void car.offsetWidth; car.classList.add('shake'); return; }
+    if(st.crossed) return;
+    st.crossed = true; save(); send({type:'cross'});
+    car.style.left = '78%';
+    msg.innerHTML = '渡っている…';
+    setTimeout(render, 2500);
+  });
+
+  resetBtn.addEventListener('click', ()=>{
+    st = {planks:0, crossed:false};
+    save(); send({type:'state', state:st});
+    car.style.transition='none'; car.style.left='12%';
+    setTimeout(()=>{ car.style.transition=''; render(); }, 30);
+  });
+
+  // ---- 初期化 ----
+  const diag=$('diag'), urlbox=$('urlbox'), urltxt=$('urltxt');
+
+  let lsOK=false, bcOK=false;
+  try{ localStorage.setItem('bridge:test','1'); localStorage.removeItem('bridge:test'); lsOK=true; }catch(e){}
+  bcOK = !!bc;
+  const inFrame = (function(){ try{ return window.self!==window.top; }catch(e){ return true; } })();
+  diag.textContent =
+    '埋め込み:' + (inFrame?'はい':'いいえ') +
+    '／localStorage:' + (lsOK?'可':'不可') +
+    '／BroadcastChannel:' + (bcOK?'可':'不可') +
+    '／origin:' + (location.origin==='null' ? 'null（サンドボックス）' : location.origin);
+
+  if(side==='a'){
+    who.textContent = 'こちら側';
+    const url = location.href.split('?')[0] + '?side=b';
+    openBtn.href = url;
+    openBtn.classList.remove('hidden');
+    urltxt.textContent = url;
+    urlbox.classList.remove('hidden');
+
+    openBtn.addEventListener('click', ()=>{
+      setTimeout(()=>{
+        if(Date.now() - partnerAt > 2500){
+          msg.innerHTML = 'タブが開けなかったようです<span>下のURLをコピーして、自分で新しいタブに貼ってください</span>';
+        }
+      }, 2500);
+    });
+
+    $('copy').addEventListener('click', async ()=>{
+      const b=$('copy');
+      try{ await navigator.clipboard.writeText(url); b.textContent='コピーしました'; }
+      catch(e){ b.textContent='長押しで選択してください'; }
+      setTimeout(()=>b.textContent='URLをコピー', 2200);
+    });
+  }else{
+    who.textContent = '向こう岸';
+    scene.classList.add('mirror');
+  }
+  render();
+  send({type:'state', state:st});
+})();
+</script>
+</body>
+</html>

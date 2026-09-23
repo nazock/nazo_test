@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ロウソク</title>
+<style>
+  :root{
+    --night:#17100a;
+    --night-deep:#0c0806;
+    --wax:#efe3cd;
+    --flame-core:#fff8dc;
+    --flame-mid:#ffc766;
+    --flame-edge:#ff7a18;
+    --smoke:#8d97a6;
+    --text:#d8cbb4;
+    --text-dim:#8a7c68;
+    box-sizing:border-box;
+    padding-top:env(safe-area-inset-top,0px);
+    padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  *,*::before,*::after{box-sizing:inherit}
+  html,body{height:100%;margin:0}
+  body{
+    background:var(--night-deep);
+    color:var(--text);
+    font-family:"Hiragino Mincho ProN","Yu Mincho",YuMincho,"Noto Serif JP",serif;
+    -webkit-font-smoothing:antialiased;
+    overflow:hidden;
+  }
+
+  .scene{
+    position:relative;
+    height:100%;
+    display:grid;
+    grid-template-rows:1fr auto;
+    background:
+      radial-gradient(60% 42% at 50% 46%, rgba(255,150,40,.16) 0%, rgba(255,120,20,.05) 45%, rgba(0,0,0,0) 72%),
+      linear-gradient(180deg,#17100a 0%, #0c0806 70%);
+    transition:background 1.6s ease;
+  }
+  .scene.out{
+    background:
+      radial-gradient(70% 50% at 50% 46%, rgba(120,140,170,.07) 0%, rgba(0,0,0,0) 70%),
+      linear-gradient(180deg,#0e1014 0%, #07080a 70%);
+  }
+
+  /* ---- candle ---- */
+  .stage{position:relative;display:flex;align-items:flex-end;justify-content:center;padding-bottom:6vh}
+  .candle{position:relative;width:86px;display:flex;flex-direction:column;align-items:center}
+
+  .flame-slot{position:relative;height:110px;width:60px;display:flex;align-items:flex-end;justify-content:center}
+  .lean{
+    position:absolute;bottom:0;left:50%;
+    transform-origin:50% 100%;
+    transform:translateX(-50%) rotate(0deg) scale(1);
+    transition:transform .09s linear, opacity .18s linear;
+    opacity:1;
+  }
+  .flame{
+    width:32px;height:72px;
+    border-radius:50% 50% 24% 24% / 64% 64% 36% 36%;
+    background:radial-gradient(ellipse at 50% 80%,
+      var(--flame-core) 0%, #ffe9a8 18%, var(--flame-mid) 40%,
+      var(--flame-edge) 68%, rgba(255,106,18,0) 100%);
+    transform-origin:50% 100%;
+    animation:flicker 2.7s ease-in-out infinite;
+    filter:blur(.3px);
+  }
+  .flame::after{
+    content:"";position:absolute;left:50%;bottom:6px;
+    width:11px;height:24px;margin-left:-5.5px;
+    border-radius:50% 50% 30% 30% / 60% 60% 40% 40%;
+    background:radial-gradient(ellipse at 50% 70%, #ffffff 0%, #cfe4ff 55%, rgba(180,215,255,0) 100%);
+    opacity:.75;
+  }
+  .halo{
+    position:absolute;bottom:-10px;left:50%;width:170px;height:170px;margin-left:-85px;
+    border-radius:50%;
+    background:radial-gradient(circle, rgba(255,170,60,.28) 0%, rgba(255,140,30,.10) 38%, rgba(0,0,0,0) 68%);
+    pointer-events:none;
+    transition:opacity .5s ease, transform .18s linear;
+  }
+  @keyframes flicker{
+    0%,100%{transform:scaleY(1) scaleX(1) skewX(0deg)}
+    22%{transform:scaleY(1.06) scaleX(.96) skewX(1.6deg)}
+    46%{transform:scaleY(.95) scaleX(1.03) skewX(-1.2deg)}
+    68%{transform:scaleY(1.04) scaleX(.98) skewX(.8deg)}
+  }
+  @media (prefers-reduced-motion:reduce){ .flame{animation:none} }
+
+  .wick{width:3px;height:11px;border-radius:2px;background:linear-gradient(180deg,#3a2c22,#1d1712);margin-bottom:-2px;z-index:2}
+  .body{
+    position:relative;width:76px;height:190px;
+    border-radius:12px 12px 8px 8px;
+    background:
+      linear-gradient(90deg, rgba(0,0,0,.42) 0%, rgba(0,0,0,0) 26%, rgba(255,255,255,.16) 52%, rgba(0,0,0,0) 74%, rgba(0,0,0,.46) 100%),
+      linear-gradient(180deg,#f3e8d3 0%, #e4d4b6 40%, #cbb694 100%);
+    box-shadow:inset 0 10px 18px rgba(255,220,160,.35);
+  }
+  .body::before{
+    content:"";position:absolute;top:-7px;left:0;right:0;height:16px;
+    border-radius:50%;
+    background:linear-gradient(180deg,#fff4df,#e8d9bb);
+  }
+  .drip{position:absolute;top:2px;width:9px;border-radius:0 0 6px 6px;background:linear-gradient(180deg,#f6ecd9,#d9c7a5);opacity:.9}
+
+  /* ---- panel ---- */
+  .panel{
+    padding:0 20px 22px;
+    display:flex;flex-direction:column;align-items:center;gap:14px;
+    max-width:420px;width:100%;margin:0 auto;
+  }
+  .caption{
+    font-size:16px;line-height:1.8;letter-spacing:.06em;text-align:center;
+    min-height:3.6em;margin:0;color:var(--text);
+  }
+  .caption small{display:block;font-size:13px;color:var(--text-dim);margin-top:.5em;letter-spacing:.04em}
+
+  .meter{width:100%;position:relative;height:6px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden}
+  .meter .fill{position:absolute;inset:0 auto 0 0;width:0%;background:linear-gradient(90deg,#ffb457,#ff7a18);transition:width .06s linear}
+  .meter .tick{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--text-dim);left:50%}
+  .meterwrap{width:100%;display:none;flex-direction:column;gap:7px}
+  .meterwrap.show{display:flex}
+  .readout{display:flex;justify-content:space-between;font-size:11px;color:var(--text-dim);letter-spacing:.06em;font-variant-numeric:tabular-nums}
+
+  button{
+    font-family:inherit;font-size:15px;letter-spacing:.14em;
+    color:#1a120a;background:linear-gradient(180deg,#f0dfbe,#d9c399);
+    border:none;border-radius:999px;padding:13px 34px;
+    cursor:pointer;touch-action:none;-webkit-user-select:none;user-select:none;
+    transition:transform .12s ease, filter .12s ease;
+  }
+  button:active{transform:scale(.97);filter:brightness(1.08)}
+  button:focus-visible{outline:2px solid #ffb457;outline-offset:3px}
+  button[hidden]{display:none}
+  .ghost{background:none;color:var(--text-dim);border:1px solid rgba(216,203,180,.28);font-size:13px;padding:9px 20px}
+
+  .tune{width:100%;display:none;align-items:center;gap:12px;font-size:11px;color:var(--text-dim);letter-spacing:.06em}
+  .tune.show{display:flex}
+  .tune input{flex:1;accent-color:#ff9a3c}
+
+  .diag{
+    width:100%;font-size:11px;line-height:1.7;letter-spacing:.03em;
+    color:var(--text-dim);text-align:left;
+    font-family:ui-monospace,"SF Mono",Menlo,monospace;
+    border-top:1px solid rgba(216,203,180,.16);padding-top:9px;
+    max-height:24vh;overflow-y:auto;
+  }
+  .diag b{color:#e0b877;font-weight:400}
+
+  /* ---- smoke ---- */
+  .smoke{position:absolute;bottom:14px;left:50%;width:8px;height:8px;margin-left:-4px;border-radius:50%;
+    background:radial-gradient(circle,rgba(190,200,215,.5),rgba(190,200,215,0) 70%);opacity:0;pointer-events:none}
+  .smoke.go{animation:rise 2.6s ease-out forwards}
+  .smoke.s2.go{animation-delay:.25s}
+  .smoke.s3.go{animation-delay:.5s}
+  @keyframes rise{
+    0%{opacity:0;transform:translate(0,0) scale(.6)}
+    15%{opacity:.75}
+    100%{opacity:0;transform:translate(-14px,-120px) scale(3.4)}
+  }
+</style>
+</head>
+<body>
+<div class="scene" id="scene">
+  <div class="stage">
+    <div class="candle">
+      <div class="flame-slot">
+        <div class="halo" id="halo"></div>
+        <div class="lean" id="lean"><div class="flame"></div></div>
+        <div class="smoke s1" id="sm1"></div>
+        <div class="smoke s2" id="sm2"></div>
+        <div class="smoke s3" id="sm3"></div>
+      </div>
+      <div class="wick"></div>
+      <div class="body">
+        <div class="drip" style="left:9px;height:52px"></div>
+        <div class="drip" style="left:58px;height:34px"></div>
+        <div class="drip" style="left:33px;height:19px"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <p class="caption" id="caption">マイクを許可すると、息で炎が揺れます。<small>音は記録も送信もされません。</small></p>
+
+    <div class="meterwrap" id="meterwrap">
+      <div class="meter"><div class="fill" id="fill"></div><div class="tick" id="tick"></div></div>
+      <div class="readout"><span id="rLeft">息の強さ</span><span id="rRight">—</span></div>
+    </div>
+
+    <div class="tune" id="tune">
+      <span>感度</span>
+      <input type="range" id="sens" min="1" max="10" value="5" aria-label="感度">
+      <span id="sensv">5</span>
+    </div>
+
+    <div class="diag" id="diag"></div>
+
+    <button id="main">火を灯す</button>
+    <button id="alt" class="ghost">マイクを使わずに試す</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const scene=$('scene'), lean=$('lean'), halo=$('halo'), cap=$('caption');
+  const mainBtn=$('main'), altBtn=$('alt'), meterwrap=$('meterwrap'), fill=$('fill'), tick=$('tick');
+  const rRight=$('rRight'), tune=$('tune'), sens=$('sens'), sensv=$('sensv');
+  const smokes=[$('sm1'),$('sm2'),$('sm3')];
+  const diag=$('diag');
+
+  const t0 = performance.now();
+  function log(msg, hi){
+    const t = ((performance.now()-t0)/1000).toFixed(2);
+    const line = document.createElement('div');
+    line.innerHTML = t + 's　' + (hi ? '<b>'+msg+'</b>' : msg);
+    diag.appendChild(line);
+    diag.scrollTop = diag.scrollHeight;
+  }
+
+  const inFrame = (function(){ try{ return window.self !== window.top; }catch(e){ return true; } })();
+  log('起動');
+  log('埋め込み表示: ' + (inFrame ? 'はい（マイクが塞がれる主因）' : 'いいえ'), inFrame);
+  log('secure context: ' + (window.isSecureContext ? 'はい' : 'いいえ'), !window.isSecureContext);
+  log('mediaDevices: ' + (navigator.mediaDevices ? 'あり' : 'なし'), !navigator.mediaDevices);
+  log('getUserMedia: ' + (navigator.mediaDevices && navigator.mediaDevices.getUserMedia ? 'あり' : 'なし'),
+      !(navigator.mediaDevices && navigator.mediaDevices.getUserMedia));
+  try{
+    if(navigator.permissions && navigator.permissions.query){
+      navigator.permissions.query({name:'microphone'})
+        .then(r => log('マイク権限の状態: ' + r.state))
+        .catch(() => log('マイク権限の状態: 照会不可（Safariでは通常これ）'));
+    }else{ log('permissions API: なし'); }
+  }catch(e){ log('permissions API: 例外'); }
+  window.addEventListener('error', e => log('JSエラー: ' + e.message, true));
+
+  let ctx=null, analyser=null, stream=null, buf=null, raf=0;
+  let floor=0, calibN=0, calibSum=0, calibrating=false;
+  let above=0, lastT=0, blowStart=0, peak=0, isOut=false, mode=null;
+
+  const SUSTAIN = 380;      // 消えるまでに必要な吹き続け時間(ms)
+  const needed  = () => 0.028 + (11 - sens.value) * 0.010;  // しきい値(感度で可変)
+
+  sens.addEventListener('input', ()=>{ sensv.textContent = sens.value; });
+
+  function setFlame(strength){            // strength: 0〜1.4くらい
+    const lb = Math.min(strength,1.4);
+    const deg = lb * 38;
+    const sc  = Math.max(.25, 1 - lb*.55);
+    lean.style.transform = `translateX(-50%) rotate(${deg}deg) scale(${sc})`;
+    halo.style.opacity = String(Math.max(.15, 1 - lb*.8));
+  }
+
+  function extinguish(ms){
+    if(isOut) return;
+    isOut = true;
+    lean.style.transform = 'translateX(-50%) rotate(52deg) scale(.08)';
+    lean.style.opacity = '0';
+    halo.style.opacity = '0';
+    scene.classList.add('out');
+    smokes.forEach(s=>s.classList.add('go'));
+    cap.innerHTML = '消えました。<small>' + (ms ? (ms/1000).toFixed(2) + '秒 吹き続けて消灯' : '') + '</small>';
+    mainBtn.textContent = 'もう一度灯す';
+    mainBtn.hidden = false;
+    fill.style.width = '0%';
+  }
+
+  function relight(){
+    isOut = false; peak = 0; blowStart = 0; above = 0;
+    lean.style.opacity = '1';
+    setFlame(0);
+    scene.classList.remove('out');
+    smokes.forEach(s=>s.classList.remove('go'));
+    cap.innerHTML = mode==='mic' ? '吹いてください。<small>うまく消えないときは感度を上げてください。</small>'
+                                 : 'ボタンを押し続けてください。<small>押している間だけ吹いていることにします。</small>';
+    mainBtn.hidden = (mode==='mic');
+    if(mode!=='mic'){ mainBtn.textContent='押し続ける'; }
+  }
+
+  // ---------- マイク ----------
+  async function startMic(){
+    log('「火を灯す」を押しました');
+    cap.innerHTML = 'マイクの使用を許可してください。';
+
+    if(!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)){
+      log('getUserMedia が存在しないため中止', true);
+      failMic({name:'Unsupported'});
+      return;
+    }
+
+    log('getUserMedia を呼びます…');
+    const ask = navigator.mediaDevices.getUserMedia({audio:{
+      echoCancellation:false, noiseSuppression:false, autoGainControl:false
+    }});
+    const timeout = new Promise((_,rej)=>setTimeout(()=>rej({name:'TimeoutError'}), 8000));
+
+    try{
+      stream = await Promise.race([ask, timeout]);
+      log('マイク取得に成功', true);
+    }catch(e){
+      log('失敗: ' + (e && e.name ? e.name : '不明') + (e && e.message ? ' / ' + e.message : ''), true);
+      failMic(e);
+      return;
+    }
+    ctx = new (window.AudioContext||window.webkitAudioContext)();
+    await ctx.resume();
+    const src = ctx.createMediaStreamSource(stream);
+    analyser = ctx.createAnalyser();
+    analyser.fftSize = 1024;
+    analyser.smoothingTimeConstant = 0.15;
+    src.connect(analyser);
+    buf = new Float32Array(analyser.frequencyBinCount);
+
+    mode = 'mic';
+    mainBtn.hidden = true;
+    altBtn.hidden = false; altBtn.textContent = 'マイクをやめて長押しで試す';
+    meterwrap.classList.add('show');
+    tune.classList.add('show');
+
+    calibrating = true; calibSum = 0; calibN = 0;
+    cap.innerHTML = '周囲の音を測っています。<small>2秒ほどそのままで。</small>';
+    setTimeout(()=>{
+      floor = calibN ? calibSum/calibN : 0;
+      calibrating = false;
+      cap.innerHTML = '吹いてください。<small>うまく消えないときは感度を上げてください。</small>';
+    }, 2000);
+
+    lastT = performance.now();
+    loop();
+  }
+
+  function failMic(e){
+    const name = e && e.name ? e.name : '';
+    let why = 'マイクを使えませんでした。', how = '';
+    if(name === 'NotAllowedError'){
+      why = 'マイクの使用が許可されませんでした。';
+      how = inFrame ? '埋め込み表示だと、許可ダイアログが出ないまま拒否されることがあります。このページを別タブで開き直してください。'
+                    : 'ブラウザの設定でこのサイトのマイクがブロックされている可能性があります。';
+    }else if(name === 'TimeoutError'){
+      why = '8秒待っても応答がありませんでした。';
+      how = '許可ダイアログが出ない場合、埋め込み枠がマイクを塞いでいます。別タブで開き直してください。';
+    }else if(name === 'NotFoundError'){
+      why = 'マイクが見つかりませんでした。';
+    }else if(name === 'Unsupported'){
+      why = 'この環境ではマイクを使えません。';
+      how = 'アプリ内ブラウザだと塞がれることがあります。Safari や Chrome で直接開いてください。';
+    }
+    cap.innerHTML = why + (how ? '<small>' + how + '</small>' : '');
+    mainBtn.hidden = false;
+    mainBtn.textContent = 'もう一度マイクを試す';
+    altBtn.hidden = false;
+  }
+
+  function loop(){
+    raf = requestAnimationFrame(loop);
+    const now = performance.now();
+    const dt = now - lastT; lastT = now;
+
+    analyser.getFloatFrequencyData(buf);
+    const rate = ctx.sampleRate, binHz = rate / analyser.fftSize;
+    const loHi = Math.max(2, Math.floor(500/binHz));   // ～500Hz：息の帯域
+    let lo=0, all=0;
+    for(let i=1;i<buf.length;i++){
+      const p = Math.pow(10, buf[i]/20);
+      all += p;
+      if(i<=loHi) lo += p;
+    }
+    const loAvg = lo/loHi;
+    const ratio = all>0 ? lo/all : 0;     // 低域に偏っているか（声をある程度はじく）
+
+    if(calibrating){ calibSum += loAvg; calibN++; fill.style.width='0%'; return; }
+
+    let level = Math.max(0, loAvg - floor*1.6);
+    if(ratio < 0.45) level *= 0.25;        // 高域が強い＝声や物音として弱める
+
+    const th = needed();
+    const shown = Math.min(1, level / (th*2));
+    fill.style.width = (shown*100).toFixed(1) + '%';
+    tick.style.left = '50%';
+    peak = Math.max(peak, level);
+    rRight.textContent = level.toFixed(3) + ' / しきい値 ' + th.toFixed(3);
+
+    if(isOut) return;
+
+    if(level > th){
+      if(!blowStart) blowStart = now;
+      above += dt;
+      setFlame(0.35 + (level/th - 1) * 0.5 + above/SUSTAIN * 0.5);
+      if(above >= SUSTAIN) extinguish(now - blowStart);
+    }else{
+      above = Math.max(0, above - dt*1.6);
+      blowStart = above>0 ? blowStart : 0;
+      setFlame(above/SUSTAIN * 0.35);
+    }
+  }
+
+  function stopMic(){
+    cancelAnimationFrame(raf);
+    if(stream) stream.getTracks().forEach(t=>t.stop());
+    if(ctx) ctx.close();
+    stream=null; ctx=null; analyser=null;
+  }
+
+  // ---------- 長押し版 ----------
+  let holdT=0, holdRaf=0, holdStart=0;
+  function startHoldMode(){
+    stopMic();
+    mode='hold';
+    meterwrap.classList.add('show');
+    tune.classList.remove('show');
+    mainBtn.hidden=false; mainBtn.textContent='押し続ける';
+    altBtn.textContent='マイクで試す';
+    rRight.textContent='押している時間';
+    cap.innerHTML = 'ボタンを押し続けてください。<small>押している間だけ吹いていることにします。</small>';
+    setFlame(0);
+  }
+  function holdDown(e){
+    if(mode!=='hold' || isOut) return;
+    e.preventDefault();
+    holdStart = performance.now(); holdT = 0;
+    const step = ()=>{
+      holdRaf = requestAnimationFrame(step);
+      holdT = performance.now() - holdStart;
+      const p = Math.min(1, holdT/1400);
+      fill.style.width = (p*100).toFixed(0)+'%';
+      setFlame(p*1.1);
+      if(p>=1){ cancelAnimationFrame(holdRaf); extinguish(holdT); }
+    };
+    step();
+  }
+  function holdUp(){
+    if(mode!=='hold') return;
+    cancelAnimationFrame(holdRaf);
+    if(!isOut){ fill.style.width='0%'; setFlame(0); }
+  }
+
+  // ---------- 配線 ----------
+  mainBtn.addEventListener('click', ()=>{
+    if(isOut){ relight(); return; }
+    if(mode===null || mainBtn.textContent.indexOf('マイク')>=0) startMic();
+  });
+  mainBtn.addEventListener('pointerdown', holdDown);
+  mainBtn.addEventListener('pointerup', holdUp);
+  mainBtn.addEventListener('pointercancel', holdUp);
+  mainBtn.addEventListener('pointerleave', holdUp);
+
+  altBtn.addEventListener('click', ()=>{
+    if(mode==='hold'){ altBtn.textContent='マイクをやめて長押しで試す'; startMic(); }
+    else startHoldMode();
+  });
+
+  setFlame(0);
+})();
+</script>
+</body>
+</html>
