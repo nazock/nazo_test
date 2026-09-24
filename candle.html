@@ -205,229 +205,219 @@
 
 <script>
 (function(){
-  const $ = id => document.getElementById(id);
+  const $=id=>document.getElementById(id);
   const scene=$('scene'), lean=$('lean'), halo=$('halo'), cap=$('caption');
   const mainBtn=$('main'), altBtn=$('alt'), meterwrap=$('meterwrap'), fill=$('fill'), tick=$('tick');
-  const rRight=$('rRight'), tune=$('tune'), sens=$('sens'), sensv=$('sensv');
+  const rLeft=$('rLeft'), rRight=$('rRight'), tune=$('tune'), sens=$('sens'), sensv=$('sensv');
   const smokes=[$('sm1'),$('sm2'),$('sm3')];
   const diag=$('diag');
 
-  const t0 = performance.now();
-  function log(msg, hi){
-    const t = ((performance.now()-t0)/1000).toFixed(2);
-    const line = document.createElement('div');
-    line.innerHTML = t + 's　' + (hi ? '<b>'+msg+'</b>' : msg);
-    diag.appendChild(line);
-    diag.scrollTop = diag.scrollHeight;
+  const t0=performance.now();
+  function log(m,hi){
+    const t=((performance.now()-t0)/1000).toFixed(2);
+    const d=document.createElement('div');
+    d.innerHTML=t+'s　'+(hi?'<b>'+m+'</b>':m);
+    diag.appendChild(d); diag.scrollTop=diag.scrollHeight;
   }
-
-  const inFrame = (function(){ try{ return window.self !== window.top; }catch(e){ return true; } })();
+  const inFrame=(function(){try{return window.self!==window.top}catch(e){return true}})();
   log('起動');
-  log('埋め込み表示: ' + (inFrame ? 'はい（マイクが塞がれる主因）' : 'いいえ'), inFrame);
-  log('secure context: ' + (window.isSecureContext ? 'はい' : 'いいえ'), !window.isSecureContext);
-  log('mediaDevices: ' + (navigator.mediaDevices ? 'あり' : 'なし'), !navigator.mediaDevices);
-  log('getUserMedia: ' + (navigator.mediaDevices && navigator.mediaDevices.getUserMedia ? 'あり' : 'なし'),
-      !(navigator.mediaDevices && navigator.mediaDevices.getUserMedia));
-  try{
-    if(navigator.permissions && navigator.permissions.query){
-      navigator.permissions.query({name:'microphone'})
-        .then(r => log('マイク権限の状態: ' + r.state))
-        .catch(() => log('マイク権限の状態: 照会不可（Safariでは通常これ）'));
-    }else{ log('permissions API: なし'); }
-  }catch(e){ log('permissions API: 例外'); }
-  window.addEventListener('error', e => log('JSエラー: ' + e.message, true));
+  log('埋め込み表示: '+(inFrame?'はい':'いいえ'));
+  log('secure context: '+(window.isSecureContext?'はい':'いいえ'));
+  log('getUserMedia: '+((navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)?'あり':'なし'));
+  window.addEventListener('error',e=>log('JSエラー: '+e.message,true));
 
-  let ctx=null, analyser=null, stream=null, buf=null, raf=0;
-  let floor=0, calibN=0, calibSum=0, calibrating=false;
+  let ctx=null, analyser=null, sink=null, stream=null, td=null, raf=0;
+  let floor=0.0008, calSum=0, calN=0, calibrating=false;
   let above=0, lastT=0, blowStart=0, peak=0, isOut=false, mode=null;
+  let silentMs=0, warnedSilent=false;
 
-  const SUSTAIN = 380;      // 消えるまでに必要な吹き続け時間(ms)
-  const needed  = () => 0.028 + (11 - sens.value) * 0.010;  // しきい値(感度で可変)
+  const SUSTAIN=350;
+  function thresh(){
+    const s=+sens.value;
+    return Math.max(floor*(2.0+(10-s)*0.8), 0.0012+(10-s)*0.0030);
+  }
+  sens.addEventListener('input',()=>{sensv.textContent=sens.value;});
 
-  sens.addEventListener('input', ()=>{ sensv.textContent = sens.value; });
-
-  function setFlame(strength){            // strength: 0〜1.4くらい
-    const lb = Math.min(strength,1.4);
-    const deg = lb * 38;
-    const sc  = Math.max(.25, 1 - lb*.55);
-    lean.style.transform = `translateX(-50%) rotate(${deg}deg) scale(${sc})`;
-    halo.style.opacity = String(Math.max(.15, 1 - lb*.8));
+  function setFlame(strength){
+    const lb=Math.min(strength,1.4);
+    lean.style.transform='translateX(-50%) rotate('+(lb*38)+'deg) scale('+Math.max(.25,1-lb*.55)+')';
+    halo.style.opacity=String(Math.max(.15,1-lb*.8));
   }
 
   function extinguish(ms){
     if(isOut) return;
-    isOut = true;
-    lean.style.transform = 'translateX(-50%) rotate(52deg) scale(.08)';
-    lean.style.opacity = '0';
-    halo.style.opacity = '0';
+    isOut=true;
+    lean.style.transform='translateX(-50%) rotate(52deg) scale(.08)';
+    lean.style.opacity='0';
+    halo.style.opacity='0';
     scene.classList.add('out');
     smokes.forEach(s=>s.classList.add('go'));
-    cap.innerHTML = '消えました。<small>' + (ms ? (ms/1000).toFixed(2) + '秒 吹き続けて消灯' : '') + '</small>';
-    mainBtn.textContent = 'もう一度灯す';
-    mainBtn.hidden = false;
-    fill.style.width = '0%';
+    cap.innerHTML='消えました。<small>'+(ms?(ms/1000).toFixed(2)+'秒 吹き続けて消灯':'')+'</small>';
+    mainBtn.textContent='もう一度灯す'; mainBtn.hidden=false;
+    fill.style.width='0%';
+    log('消灯（'+(ms/1000).toFixed(2)+'秒）',true);
   }
 
   function relight(){
-    isOut = false; peak = 0; blowStart = 0; above = 0;
-    lean.style.opacity = '1';
-    setFlame(0);
+    isOut=false; peak=0; blowStart=0; above=0;
+    lean.style.opacity='1'; setFlame(0);
     scene.classList.remove('out');
     smokes.forEach(s=>s.classList.remove('go'));
-    cap.innerHTML = mode==='mic' ? '吹いてください。<small>うまく消えないときは感度を上げてください。</small>'
-                                 : 'ボタンを押し続けてください。<small>押している間だけ吹いていることにします。</small>';
-    mainBtn.hidden = (mode==='mic');
-    if(mode!=='mic'){ mainBtn.textContent='押し続ける'; }
+    cap.innerHTML=(mode==='mic')?'吹いてください。<small>消えないときは感度を上げてください。</small>'
+                                :'ボタンを押し続けてください。<small>押している間だけ吹いていることにします。</small>';
+    mainBtn.hidden=(mode==='mic');
+    if(mode!=='mic') mainBtn.textContent='押し続ける';
   }
 
-  // ---------- マイク ----------
+  function readRMS(){
+    if(analyser.getFloatTimeDomainData){
+      analyser.getFloatTimeDomainData(td);
+      let s=0; for(let i=0;i<td.length;i++){ s+=td[i]*td[i]; }
+      return Math.sqrt(s/td.length);
+    }
+    const b=new Uint8Array(analyser.fftSize);
+    analyser.getByteTimeDomainData(b);
+    let s=0; for(let i=0;i<b.length;i++){ const v=(b[i]-128)/128; s+=v*v; }
+    return Math.sqrt(s/b.length);
+  }
+
   async function startMic(){
     log('「火を灯す」を押しました');
-    cap.innerHTML = 'マイクの使用を許可してください。';
+    // ジェスチャの中で AudioContext を作って起こす（iOS対策）
+    try{
+      if(!ctx) ctx=new (window.AudioContext||window.webkitAudioContext)();
+      ctx.resume();
+      log('AudioContext: '+ctx.state+' / '+ctx.sampleRate+'Hz');
+    }catch(e){ log('AudioContext失敗: '+e.message,true); }
 
-    if(!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)){
-      log('getUserMedia が存在しないため中止', true);
-      failMic({name:'Unsupported'});
-      return;
+    if(!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)){
+      log('getUserMediaなし',true); failMic({name:'Unsupported'}); return;
     }
-
+    cap.innerHTML='マイクの使用を許可してください。';
     log('getUserMedia を呼びます…');
-    const ask = navigator.mediaDevices.getUserMedia({audio:{
+
+    const ask=navigator.mediaDevices.getUserMedia({audio:{
       echoCancellation:false, noiseSuppression:false, autoGainControl:false
     }});
-    const timeout = new Promise((_,rej)=>setTimeout(()=>rej({name:'TimeoutError'}), 8000));
-
+    const to=new Promise((_,rej)=>setTimeout(()=>rej({name:'TimeoutError'}),10000));
     try{
-      stream = await Promise.race([ask, timeout]);
-      log('マイク取得に成功', true);
+      stream=await Promise.race([ask,to]);
+      log('マイク取得に成功',true);
     }catch(e){
-      log('失敗: ' + (e && e.name ? e.name : '不明') + (e && e.message ? ' / ' + e.message : ''), true);
-      failMic(e);
-      return;
+      log('失敗: '+(e&&e.name?e.name:'不明'),true); failMic(e); return;
     }
-    ctx = new (window.AudioContext||window.webkitAudioContext)();
-    await ctx.resume();
-    const src = ctx.createMediaStreamSource(stream);
-    analyser = ctx.createAnalyser();
-    analyser.fftSize = 1024;
-    analyser.smoothingTimeConstant = 0.15;
+
+    const tr=stream.getAudioTracks()[0];
+    log('トラック: '+(tr?tr.label||'(名前なし)':'なし')+' / enabled:'+(tr?tr.enabled:'-')+' / muted:'+(tr?tr.muted:'-'));
+    if(tr) tr.addEventListener('mute',()=>log('トラックがミュートされました',true));
+
+    try{ await ctx.resume(); }catch(e){}
+    log('AudioContext(取得後): '+ctx.state, ctx.state!=='running');
+
+    const src=ctx.createMediaStreamSource(stream);
+    analyser=ctx.createAnalyser();
+    analyser.fftSize=2048;
+    analyser.smoothingTimeConstant=0;
     src.connect(analyser);
-    buf = new Float32Array(analyser.frequencyBinCount);
+    // 出口まで繋がないとグラフが動かない環境があるので、無音で出す
+    sink=ctx.createGain(); sink.gain.value=0;
+    analyser.connect(sink); sink.connect(ctx.destination);
+    td=new Float32Array(analyser.fftSize);
 
-    mode = 'mic';
-    mainBtn.hidden = true;
-    altBtn.hidden = false; altBtn.textContent = 'マイクをやめて長押しで試す';
-    meterwrap.classList.add('show');
-    tune.classList.add('show');
+    mode='mic';
+    mainBtn.hidden=true;
+    altBtn.hidden=false; altBtn.textContent='マイクをやめて長押しで試す';
+    meterwrap.classList.add('show'); tune.classList.add('show');
 
-    calibrating = true; calibSum = 0; calibN = 0;
-    cap.innerHTML = '周囲の音を測っています。<small>2秒ほどそのままで。</small>';
+    calibrating=true; calSum=0; calN=0;
+    cap.innerHTML='周囲の音を測っています。<small>2秒ほどそのままで。</small>';
     setTimeout(()=>{
-      floor = calibN ? calibSum/calibN : 0;
-      calibrating = false;
-      cap.innerHTML = '吹いてください。<small>うまく消えないときは感度を上げてください。</small>';
-    }, 2000);
+      floor=calN?Math.max(calSum/calN,0.0003):0.0008;
+      calibrating=false;
+      log('環境音の基準: '+floor.toFixed(5));
+      cap.innerHTML='吹いてください。<small>消えないときは感度を上げてください。</small>';
+    },2000);
 
-    lastT = performance.now();
+    lastT=performance.now();
     loop();
   }
 
   function failMic(e){
-    const name = e && e.name ? e.name : '';
-    let why = 'マイクを使えませんでした。', how = '';
-    if(name === 'NotAllowedError'){
-      why = 'マイクの使用が許可されませんでした。';
-      how = inFrame ? '埋め込み表示だと、許可ダイアログが出ないまま拒否されることがあります。このページを別タブで開き直してください。'
-                    : 'ブラウザの設定でこのサイトのマイクがブロックされている可能性があります。';
-    }else if(name === 'TimeoutError'){
-      why = '8秒待っても応答がありませんでした。';
-      how = '許可ダイアログが出ない場合、埋め込み枠がマイクを塞いでいます。別タブで開き直してください。';
-    }else if(name === 'NotFoundError'){
-      why = 'マイクが見つかりませんでした。';
-    }else if(name === 'Unsupported'){
-      why = 'この環境ではマイクを使えません。';
-      how = 'アプリ内ブラウザだと塞がれることがあります。Safari や Chrome で直接開いてください。';
-    }
-    cap.innerHTML = why + (how ? '<small>' + how + '</small>' : '');
-    mainBtn.hidden = false;
-    mainBtn.textContent = 'もう一度マイクを試す';
-    altBtn.hidden = false;
+    const n=e&&e.name?e.name:'';
+    let why='マイクを使えませんでした。', how='';
+    if(n==='NotAllowedError'){ why='マイクの使用が許可されませんでした。'; how='ブラウザの設定でこのサイトのマイクを許可してください。'; }
+    else if(n==='TimeoutError'){ why='応答がありませんでした。'; }
+    else if(n==='NotFoundError'){ why='マイクが見つかりませんでした。'; }
+    else if(n==='Unsupported'){ why='この環境ではマイクを使えません。'; }
+    cap.innerHTML=why+(how?'<small>'+how+'</small>':'');
+    mainBtn.hidden=false; mainBtn.textContent='もう一度マイクを試す';
+    altBtn.hidden=false;
   }
 
   function loop(){
-    raf = requestAnimationFrame(loop);
-    const now = performance.now();
-    const dt = now - lastT; lastT = now;
+    raf=requestAnimationFrame(loop);
+    const now=performance.now(); const dt=now-lastT; lastT=now;
+    const rms=readRMS();
 
-    analyser.getFloatFrequencyData(buf);
-    const rate = ctx.sampleRate, binHz = rate / analyser.fftSize;
-    const loHi = Math.max(2, Math.floor(500/binHz));   // ～500Hz：息の帯域
-    let lo=0, all=0;
-    for(let i=1;i<buf.length;i++){
-      const p = Math.pow(10, buf[i]/20);
-      all += p;
-      if(i<=loHi) lo += p;
-    }
-    const loAvg = lo/loHi;
-    const ratio = all>0 ? lo/all : 0;     // 低域に偏っているか（声をある程度はじく）
+    if(calibrating){ calSum+=rms; calN++; fill.style.width='0%'; rRight.textContent=rms.toFixed(5); return; }
 
-    if(calibrating){ calibSum += loAvg; calibN++; fill.style.width='0%'; return; }
+    if(rms<0.000002){
+      silentMs+=dt;
+      if(silentMs>2500&&!warnedSilent){
+        warnedSilent=true;
+        log('入力が無音のままです。AudioContext: '+ctx.state,true);
+        cap.innerHTML='音が全く入っていません。<small>「もう一度マイクを試す」で録り直してください。</small>';
+        mainBtn.hidden=false; mainBtn.textContent='もう一度マイクを試す';
+      }
+    }else{ silentMs=0; }
 
-    let level = Math.max(0, loAvg - floor*1.6);
-    if(ratio < 0.45) level *= 0.25;        // 高域が強い＝声や物音として弱める
-
-    const th = needed();
-    const shown = Math.min(1, level / (th*2));
-    fill.style.width = (shown*100).toFixed(1) + '%';
-    tick.style.left = '50%';
-    peak = Math.max(peak, level);
-    rRight.textContent = level.toFixed(3) + ' / しきい値 ' + th.toFixed(3);
+    const th=thresh();
+    fill.style.width=(Math.min(1,rms/(th*2))*100).toFixed(1)+'%';
+    peak=Math.max(peak,rms);
+    rLeft.textContent='ctx:'+ctx.state+'／環境音 '+floor.toFixed(4);
+    rRight.textContent=rms.toFixed(4)+' / '+th.toFixed(4)+'（最大 '+peak.toFixed(4)+'）';
 
     if(isOut) return;
 
-    if(level > th){
-      if(!blowStart) blowStart = now;
-      above += dt;
-      setFlame(0.35 + (level/th - 1) * 0.5 + above/SUSTAIN * 0.5);
-      if(above >= SUSTAIN) extinguish(now - blowStart);
+    if(rms>th){
+      if(!blowStart) blowStart=now;
+      above+=dt;
+      setFlame(0.35+(rms/th-1)*0.35+above/SUSTAIN*0.5);
+      if(above>=SUSTAIN) extinguish(now-blowStart);
     }else{
-      above = Math.max(0, above - dt*1.6);
-      blowStart = above>0 ? blowStart : 0;
-      setFlame(above/SUSTAIN * 0.35);
+      above=Math.max(0,above-dt*1.6);
+      if(above<=0) blowStart=0;
+      setFlame(above/SUSTAIN*0.35);
     }
   }
 
   function stopMic(){
     cancelAnimationFrame(raf);
     if(stream) stream.getTracks().forEach(t=>t.stop());
-    if(ctx) ctx.close();
-    stream=null; ctx=null; analyser=null;
+    stream=null; analyser=null;
   }
 
-  // ---------- 長押し版 ----------
-  let holdT=0, holdRaf=0, holdStart=0;
+  // ---- 長押し版 ----
+  let holdRaf=0, holdStart=0;
   function startHoldMode(){
-    stopMic();
-    mode='hold';
-    meterwrap.classList.add('show');
-    tune.classList.remove('show');
+    stopMic(); mode='hold';
+    meterwrap.classList.add('show'); tune.classList.remove('show');
     mainBtn.hidden=false; mainBtn.textContent='押し続ける';
     altBtn.textContent='マイクで試す';
     rRight.textContent='押している時間';
-    cap.innerHTML = 'ボタンを押し続けてください。<small>押している間だけ吹いていることにします。</small>';
+    cap.innerHTML='ボタンを押し続けてください。<small>押している間だけ吹いていることにします。</small>';
     setFlame(0);
   }
   function holdDown(e){
-    if(mode!=='hold' || isOut) return;
+    if(mode!=='hold'||isOut) return;
     e.preventDefault();
-    holdStart = performance.now(); holdT = 0;
-    const step = ()=>{
-      holdRaf = requestAnimationFrame(step);
-      holdT = performance.now() - holdStart;
-      const p = Math.min(1, holdT/1400);
-      fill.style.width = (p*100).toFixed(0)+'%';
+    holdStart=performance.now();
+    const step=()=>{
+      holdRaf=requestAnimationFrame(step);
+      const p=Math.min(1,(performance.now()-holdStart)/1400);
+      fill.style.width=(p*100).toFixed(0)+'%';
       setFlame(p*1.1);
-      if(p>=1){ cancelAnimationFrame(holdRaf); extinguish(holdT); }
+      if(p>=1){ cancelAnimationFrame(holdRaf); extinguish(performance.now()-holdStart); }
     };
     step();
   }
@@ -437,17 +427,18 @@
     if(!isOut){ fill.style.width='0%'; setFlame(0); }
   }
 
-  // ---------- 配線 ----------
-  mainBtn.addEventListener('click', ()=>{
+  mainBtn.addEventListener('click',()=>{
     if(isOut){ relight(); return; }
-    if(mode===null || mainBtn.textContent.indexOf('マイク')>=0) startMic();
+    if(mode==='hold') return;
+    warnedSilent=false; silentMs=0;
+    startMic();
   });
-  mainBtn.addEventListener('pointerdown', holdDown);
-  mainBtn.addEventListener('pointerup', holdUp);
-  mainBtn.addEventListener('pointercancel', holdUp);
-  mainBtn.addEventListener('pointerleave', holdUp);
+  mainBtn.addEventListener('pointerdown',holdDown);
+  mainBtn.addEventListener('pointerup',holdUp);
+  mainBtn.addEventListener('pointercancel',holdUp);
+  mainBtn.addEventListener('pointerleave',holdUp);
 
-  altBtn.addEventListener('click', ()=>{
+  altBtn.addEventListener('click',()=>{
     if(mode==='hold'){ altBtn.textContent='マイクをやめて長押しで試す'; startMic(); }
     else startHoldMode();
   });
