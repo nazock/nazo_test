@@ -3,163 +3,87 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ロウソク</title>
+<title>ロウソク v5</title>
 <style>
   :root{
-    --night:#17100a;
-    --night-deep:#0c0806;
-    --wax:#efe3cd;
-    --flame-core:#fff8dc;
-    --flame-mid:#ffc766;
-    --flame-edge:#ff7a18;
-    --smoke:#8d97a6;
-    --text:#d8cbb4;
-    --text-dim:#8a7c68;
+    --night:#17100a; --night-deep:#0c0806;
+    --flame-core:#fff8dc; --flame-mid:#ffc766; --flame-edge:#ff7a18;
+    --text:#d8cbb4; --text-dim:#8a7c68;
     box-sizing:border-box;
-    padding-top:env(safe-area-inset-top,0px);
-    padding-bottom:env(safe-area-inset-bottom,0px);
   }
   *,*::before,*::after{box-sizing:inherit}
-  html,body{height:100%;margin:0}
+  html{height:100%}
   body{
-    background:var(--night-deep);
-    color:var(--text);
-    font-family:"Hiragino Mincho ProN","Yu Mincho",YuMincho,"Noto Serif JP",serif;
+    margin:0; min-height:100%;
+    background:var(--night-deep); color:var(--text);
+    font-family:"Hiragino Mincho ProN","Yu Mincho",YuMincho,serif;
     -webkit-font-smoothing:antialiased;
-    overflow:hidden;
   }
-
   .scene{
-    position:relative;
-    height:100%;
-    display:grid;
-    grid-template-rows:1fr auto;
+    min-height:100vh; min-height:100dvh;
+    display:flex; flex-direction:column;
+    padding-top:env(safe-area-inset-top,0px);
+    padding-bottom:calc(env(safe-area-inset-bottom,0px) + 90px);
     background:
-      radial-gradient(60% 42% at 50% 46%, rgba(255,150,40,.16) 0%, rgba(255,120,20,.05) 45%, rgba(0,0,0,0) 72%),
-      linear-gradient(180deg,#17100a 0%, #0c0806 70%);
+      radial-gradient(60% 34% at 50% 26%, rgba(255,150,40,.16) 0%, rgba(255,120,20,.05) 45%, rgba(0,0,0,0) 72%),
+      linear-gradient(180deg,#17100a 0%, #0c0806 60%);
     transition:background 1.6s ease;
   }
-  .scene.out{
-    background:
-      radial-gradient(70% 50% at 50% 46%, rgba(120,140,170,.07) 0%, rgba(0,0,0,0) 70%),
-      linear-gradient(180deg,#0e1014 0%, #07080a 70%);
-  }
+  .scene.out{ background:linear-gradient(180deg,#0e1014 0%, #07080a 60%); }
 
-  /* ---- candle ---- */
-  .stage{position:relative;display:flex;align-items:flex-end;justify-content:center;padding-bottom:6vh}
+  .stage{flex:none;height:38vh;min-height:210px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:10px}
   .candle{position:relative;width:86px;display:flex;flex-direction:column;align-items:center}
-
-  .flame-slot{position:relative;height:110px;width:60px;display:flex;align-items:flex-end;justify-content:center}
-  .lean{
-    position:absolute;bottom:0;left:50%;
-    transform-origin:50% 100%;
-    transform:translateX(-50%) rotate(0deg) scale(1);
-    transition:transform .09s linear, opacity .18s linear;
-    opacity:1;
-  }
-  .flame{
-    width:32px;height:72px;
-    border-radius:50% 50% 24% 24% / 64% 64% 36% 36%;
-    background:radial-gradient(ellipse at 50% 80%,
-      var(--flame-core) 0%, #ffe9a8 18%, var(--flame-mid) 40%,
-      var(--flame-edge) 68%, rgba(255,106,18,0) 100%);
-    transform-origin:50% 100%;
-    animation:flicker 2.7s ease-in-out infinite;
-    filter:blur(.3px);
-  }
-  .flame::after{
-    content:"";position:absolute;left:50%;bottom:6px;
-    width:11px;height:24px;margin-left:-5.5px;
+  .flame-slot{position:relative;height:100px;width:60px;display:flex;align-items:flex-end;justify-content:center}
+  .lean{position:absolute;bottom:0;left:50%;transform-origin:50% 100%;
+    transform:translateX(-50%) rotate(0deg) scale(1);transition:transform .09s linear, opacity .18s linear;opacity:1}
+  .flame{width:30px;height:66px;border-radius:50% 50% 24% 24% / 64% 64% 36% 36%;
+    background:radial-gradient(ellipse at 50% 80%, var(--flame-core) 0%, #ffe9a8 18%, var(--flame-mid) 40%, var(--flame-edge) 68%, rgba(255,106,18,0) 100%);
+    transform-origin:50% 100%;animation:flicker 2.7s ease-in-out infinite}
+  .flame::after{content:"";position:absolute;left:50%;bottom:6px;width:10px;height:22px;margin-left:-5px;
     border-radius:50% 50% 30% 30% / 60% 60% 40% 40%;
-    background:radial-gradient(ellipse at 50% 70%, #ffffff 0%, #cfe4ff 55%, rgba(180,215,255,0) 100%);
-    opacity:.75;
-  }
-  .halo{
-    position:absolute;bottom:-10px;left:50%;width:170px;height:170px;margin-left:-85px;
-    border-radius:50%;
-    background:radial-gradient(circle, rgba(255,170,60,.28) 0%, rgba(255,140,30,.10) 38%, rgba(0,0,0,0) 68%);
-    pointer-events:none;
-    transition:opacity .5s ease, transform .18s linear;
-  }
-  @keyframes flicker{
-    0%,100%{transform:scaleY(1) scaleX(1) skewX(0deg)}
-    22%{transform:scaleY(1.06) scaleX(.96) skewX(1.6deg)}
-    46%{transform:scaleY(.95) scaleX(1.03) skewX(-1.2deg)}
-    68%{transform:scaleY(1.04) scaleX(.98) skewX(.8deg)}
-  }
-  @media (prefers-reduced-motion:reduce){ .flame{animation:none} }
-
-  .wick{width:3px;height:11px;border-radius:2px;background:linear-gradient(180deg,#3a2c22,#1d1712);margin-bottom:-2px;z-index:2}
-  .body{
-    position:relative;width:76px;height:190px;
-    border-radius:12px 12px 8px 8px;
-    background:
-      linear-gradient(90deg, rgba(0,0,0,.42) 0%, rgba(0,0,0,0) 26%, rgba(255,255,255,.16) 52%, rgba(0,0,0,0) 74%, rgba(0,0,0,.46) 100%),
-      linear-gradient(180deg,#f3e8d3 0%, #e4d4b6 40%, #cbb694 100%);
-    box-shadow:inset 0 10px 18px rgba(255,220,160,.35);
-  }
-  .body::before{
-    content:"";position:absolute;top:-7px;left:0;right:0;height:16px;
-    border-radius:50%;
-    background:linear-gradient(180deg,#fff4df,#e8d9bb);
-  }
-  .drip{position:absolute;top:2px;width:9px;border-radius:0 0 6px 6px;background:linear-gradient(180deg,#f6ecd9,#d9c7a5);opacity:.9}
-
-  /* ---- panel ---- */
-  .panel{
-    padding:0 20px 22px;
-    display:flex;flex-direction:column;align-items:center;gap:14px;
-    max-width:420px;width:100%;margin:0 auto;
-  }
-  .caption{
-    font-size:16px;line-height:1.8;letter-spacing:.06em;text-align:center;
-    min-height:3.6em;margin:0;color:var(--text);
-  }
-  .caption small{display:block;font-size:13px;color:var(--text-dim);margin-top:.5em;letter-spacing:.04em}
-
-  .meter{width:100%;position:relative;height:6px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden}
-  .meter .fill{position:absolute;inset:0 auto 0 0;width:0%;background:linear-gradient(90deg,#ffb457,#ff7a18);transition:width .06s linear}
-  .meter .tick{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--text-dim);left:50%}
-  .meterwrap{width:100%;display:none;flex-direction:column;gap:7px}
-  .meterwrap.show{display:flex}
-  .readout{display:flex;justify-content:space-between;font-size:11px;color:var(--text-dim);letter-spacing:.06em;font-variant-numeric:tabular-nums}
-
-  button{
-    font-family:inherit;font-size:15px;letter-spacing:.14em;
-    color:#1a120a;background:linear-gradient(180deg,#f0dfbe,#d9c399);
-    border:none;border-radius:999px;padding:13px 34px;
-    cursor:pointer;touch-action:none;-webkit-user-select:none;user-select:none;
-    transition:transform .12s ease, filter .12s ease;
-  }
-  button:active{transform:scale(.97);filter:brightness(1.08)}
-  button:focus-visible{outline:2px solid #ffb457;outline-offset:3px}
-  button[hidden]{display:none}
-  .ghost{background:none;color:var(--text-dim);border:1px solid rgba(216,203,180,.28);font-size:13px;padding:9px 20px}
-
-  .tune{width:100%;display:none;align-items:center;gap:12px;font-size:11px;color:var(--text-dim);letter-spacing:.06em}
-  .tune.show{display:flex}
-  .tune input{flex:1;accent-color:#ff9a3c}
-
-  .diag{
-    width:100%;font-size:11px;line-height:1.7;letter-spacing:.03em;
-    color:var(--text-dim);text-align:left;
-    font-family:ui-monospace,"SF Mono",Menlo,monospace;
-    border-top:1px solid rgba(216,203,180,.16);padding-top:9px;
-    max-height:24vh;overflow-y:auto;
-  }
-  .diag b{color:#e0b877;font-weight:400}
-
-  /* ---- smoke ---- */
+    background:radial-gradient(ellipse at 50% 70%, #fff 0%, #cfe4ff 55%, rgba(180,215,255,0) 100%);opacity:.75}
+  .halo{position:absolute;bottom:-10px;left:50%;width:150px;height:150px;margin-left:-75px;border-radius:50%;
+    background:radial-gradient(circle, rgba(255,170,60,.26) 0%, rgba(255,140,30,.09) 38%, rgba(0,0,0,0) 68%);
+    pointer-events:none;transition:opacity .5s ease}
+  @keyframes flicker{0%,100%{transform:scaleY(1) skewX(0)}25%{transform:scaleY(1.06) skewX(1.6deg)}50%{transform:scaleY(.95) skewX(-1.2deg)}75%{transform:scaleY(1.04) skewX(.8deg)}}
+  @media (prefers-reduced-motion:reduce){.flame{animation:none}}
+  .wick{width:3px;height:10px;border-radius:2px;background:#2a211a;margin-bottom:-2px;z-index:2}
+  .body{position:relative;width:74px;height:120px;border-radius:10px 10px 7px 7px;
+    background:linear-gradient(90deg, rgba(0,0,0,.42) 0%, rgba(0,0,0,0) 26%, rgba(255,255,255,.16) 52%, rgba(0,0,0,0) 74%, rgba(0,0,0,.46) 100%),
+               linear-gradient(180deg,#f3e8d3 0%, #e4d4b6 40%, #cbb694 100%);
+    box-shadow:inset 0 10px 18px rgba(255,220,160,.3)}
+  .body::before{content:"";position:absolute;top:-6px;left:0;right:0;height:14px;border-radius:50%;background:linear-gradient(180deg,#fff4df,#e8d9bb)}
+  .drip{position:absolute;top:2px;width:8px;border-radius:0 0 6px 6px;background:linear-gradient(180deg,#f6ecd9,#d9c7a5)}
   .smoke{position:absolute;bottom:14px;left:50%;width:8px;height:8px;margin-left:-4px;border-radius:50%;
     background:radial-gradient(circle,rgba(190,200,215,.5),rgba(190,200,215,0) 70%);opacity:0;pointer-events:none}
   .smoke.go{animation:rise 2.6s ease-out forwards}
-  .smoke.s2.go{animation-delay:.25s}
-  .smoke.s3.go{animation-delay:.5s}
-  @keyframes rise{
-    0%{opacity:0;transform:translate(0,0) scale(.6)}
-    15%{opacity:.75}
-    100%{opacity:0;transform:translate(-14px,-120px) scale(3.4)}
-  }
+  .smoke.s2.go{animation-delay:.25s}.smoke.s3.go{animation-delay:.5s}
+  @keyframes rise{0%{opacity:0;transform:translate(0,0) scale(.6)}15%{opacity:.75}100%{opacity:0;transform:translate(-14px,-110px) scale(3.2)}}
+
+  .panel{flex:1;display:flex;flex-direction:column;align-items:center;gap:13px;padding:0 18px;width:100%;max-width:440px;margin:0 auto}
+  .caption{font-size:16px;line-height:1.8;letter-spacing:.05em;text-align:center;min-height:3.4em;margin:0}
+  .caption small{display:block;font-size:13px;color:var(--text-dim);margin-top:.5em}
+  .meterwrap{width:100%;display:none;flex-direction:column;gap:7px}
+  .meterwrap.show{display:flex}
+  .meter{position:relative;height:6px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden}
+  .meter .fill{position:absolute;inset:0 auto 0 0;width:0%;background:linear-gradient(90deg,#ffb457,#ff7a18);transition:width .06s linear}
+  .meter .tick{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--text-dim);left:50%}
+  .readout{display:flex;justify-content:space-between;gap:10px;font-size:11px;color:var(--text-dim);font-variant-numeric:tabular-nums}
+  .tune{width:100%;display:none;align-items:center;gap:11px;font-size:11px;color:var(--text-dim)}
+  .tune.show{display:flex}
+  .tune input{flex:1;accent-color:#ff9a3c}
+  .tune .val{min-width:56px;text-align:right;font-variant-numeric:tabular-nums}
+  button{font-family:inherit;font-size:15px;letter-spacing:.12em;color:#1a120a;
+    background:linear-gradient(180deg,#f0dfbe,#d9c399);border:none;border-radius:999px;padding:13px 32px;
+    cursor:pointer;touch-action:none;-webkit-user-select:none;user-select:none}
+  button:active{transform:scale(.97)}
+  button:focus-visible{outline:2px solid #ffb457;outline-offset:3px}
+  button[hidden]{display:none}
+  .ghost{background:none;color:var(--text-dim);border:1px solid rgba(216,203,180,.28);font-size:13px;padding:9px 18px}
+  .diag{width:100%;font:11px/1.7 ui-monospace,Menlo,monospace;color:var(--text-dim);
+    border-top:1px solid rgba(216,203,180,.16);padding:9px 0 0;margin-top:4px}
+  .diag b{color:#e8c98a;font-weight:400}
+  .ver{font:10px/1 ui-monospace,monospace;color:#5c5346;letter-spacing:.1em;padding:8px 0}
 </style>
 </head>
 <body>
@@ -169,284 +93,196 @@
       <div class="flame-slot">
         <div class="halo" id="halo"></div>
         <div class="lean" id="lean"><div class="flame"></div></div>
-        <div class="smoke s1" id="sm1"></div>
-        <div class="smoke s2" id="sm2"></div>
-        <div class="smoke s3" id="sm3"></div>
+        <div class="smoke s1" id="sm1"></div><div class="smoke s2" id="sm2"></div><div class="smoke s3" id="sm3"></div>
       </div>
       <div class="wick"></div>
       <div class="body">
-        <div class="drip" style="left:9px;height:52px"></div>
-        <div class="drip" style="left:58px;height:34px"></div>
-        <div class="drip" style="left:33px;height:19px"></div>
+        <div class="drip" style="left:9px;height:40px"></div>
+        <div class="drip" style="left:56px;height:26px"></div>
+        <div class="drip" style="left:32px;height:15px"></div>
       </div>
     </div>
   </div>
 
   <div class="panel">
     <p class="caption" id="caption">マイクを許可すると、息で炎が揺れます。<small>音は記録も送信もされません。</small></p>
-
     <div class="meterwrap" id="meterwrap">
-      <div class="meter"><div class="fill" id="fill"></div><div class="tick" id="tick"></div></div>
+      <div class="meter"><div class="fill" id="fill"></div><div class="tick"></div></div>
       <div class="readout"><span id="rLeft">息の強さ</span><span id="rRight">—</span></div>
     </div>
-
-    <div class="tune" id="tune">
-      <span>感度</span>
-      <input type="range" id="sens" min="1" max="10" value="5" aria-label="感度">
-      <span id="sensv">5</span>
-    </div>
-
-    <div class="diag" id="diag"></div>
-
+    <div class="tune" id="tuneS"><span>感度</span><input type="range" id="sens" min="1" max="10" step="1" value="5"><span class="val" id="sensv">0.0194</span></div>
+    <div class="tune" id="tuneD"><span>吹く長さ</span><input type="range" id="durr" min="150" max="1200" step="50" value="350"><span class="val" id="durv">0.35秒</span></div>
     <button id="main">火を灯す</button>
-    <button id="alt" class="ghost">マイクを使わずに試す</button>
+    <button id="alt" class="ghost" hidden>測定モード</button>
+    <div class="diag" id="diag"></div>
+    <div class="ver">candle v5</div>
   </div>
 </div>
 
 <script>
 (function(){
   const $=id=>document.getElementById(id);
-  const scene=$('scene'), lean=$('lean'), halo=$('halo'), cap=$('caption');
-  const mainBtn=$('main'), altBtn=$('alt'), meterwrap=$('meterwrap'), fill=$('fill'), tick=$('tick');
-  const rLeft=$('rLeft'), rRight=$('rRight'), tune=$('tune'), sens=$('sens'), sensv=$('sensv');
+  const scene=$('scene'),lean=$('lean'),halo=$('halo'),cap=$('caption'),
+        mainBtn=$('main'),altBtn=$('alt'),meterwrap=$('meterwrap'),fill=$('fill'),
+        rLeft=$('rLeft'),rRight=$('rRight'),tuneS=$('tuneS'),tuneD=$('tuneD'),
+        sens=$('sens'),sensv=$('sensv'),durr=$('durr'),durv=$('durv'),diag=$('diag');
   const smokes=[$('sm1'),$('sm2'),$('sm3')];
-  const diag=$('diag');
 
   const t0=performance.now();
-  function log(m,hi){
-    const t=((performance.now()-t0)/1000).toFixed(2);
-    const d=document.createElement('div');
-    d.innerHTML=t+'s　'+(hi?'<b>'+m+'</b>':m);
-    diag.appendChild(d); diag.scrollTop=diag.scrollHeight;
-  }
+  function log(m,hi){const t=((performance.now()-t0)/1000).toFixed(2);
+    const d=document.createElement('div');d.innerHTML=t+'s　'+(hi?'<b>'+m+'</b>':m);diag.appendChild(d);}
+  log('candle v5 起動',true);
   window.addEventListener('error',e=>log('JSエラー: '+e.message,true));
 
-  let ctx=null, analyser=null, sink=null, stream=null, td=null, raf=0;
-  let floor=0.0008, calSum=0, calN=0, calibrating=false;
-  let above=0, lastT=0, blowStart=0, peak=0, isOut=false, mode=null;
+  let ctx=null,analyser=null,stream=null,td=null,raf=0;
+  let floor=0.0008,calSum=0,calN=0,calibrating=false;
+  let above=0,lastT=0,blowStart=0,peak=0,isOut=false,mode=null;
+  let SUSTAIN=350;
 
-  // ---- 調整できる2つの値 ----
-  let SUSTAIN=350;                 // 吹き続ける必要時間(ms)
-  function thresh(){               // しきい値
+  // しきい値：対数で 0.0015 〜 0.15 まで
+  function thresh(){
     const s=+sens.value;
-    return Math.max(floor*(2.0+(10-s)*0.8), 0.0012+(10-s)*0.0030);
+    return Math.max(0.0015*Math.pow(100,(10-s)/9), floor*1.8);
   }
-  sens.addEventListener('input',()=>{ sensv.textContent=sens.value; });
+  function showSens(){ sensv.textContent=thresh().toFixed(4); }
+  sens.addEventListener('input',showSens);
+  durr.addEventListener('input',()=>{SUSTAIN=+durr.value;durv.textContent=(SUSTAIN/1000).toFixed(2)+'秒';});
+  showSens();
 
-  function setFlame(v){
-    const lb=Math.min(v,1.4);
+  function setFlame(v){const lb=Math.min(v,1.4);
     lean.style.transform='translateX(-50%) rotate('+(lb*38)+'deg) scale('+Math.max(.25,1-lb*.55)+')';
-    halo.style.opacity=String(Math.max(.15,1-lb*.8));
-  }
+    halo.style.opacity=String(Math.max(.15,1-lb*.8));}
   function extinguish(ms){
-    if(isOut) return;
-    isOut=true;
-    lean.style.transform='translateX(-50%) rotate(52deg) scale(.08)';
-    lean.style.opacity='0'; halo.style.opacity='0';
-    scene.classList.add('out');
-    smokes.forEach(s=>s.classList.add('go'));
+    if(isOut)return; isOut=true;
+    lean.style.transform='translateX(-50%) rotate(52deg) scale(.08)';lean.style.opacity='0';halo.style.opacity='0';
+    scene.classList.add('out');smokes.forEach(s=>s.classList.add('go'));
     cap.innerHTML='消えました。<small>'+(ms?(ms/1000).toFixed(2)+'秒 吹き続けて消灯':'')+'</small>';
-    mainBtn.textContent='もう一度灯す'; mainBtn.hidden=false;
-    fill.style.width='0%';
+    mainBtn.textContent='もう一度灯す';mainBtn.hidden=false;fill.style.width='0%';
   }
   function relight(){
-    isOut=false; peak=0; blowStart=0; above=0;
-    lean.style.opacity='1'; setFlame(0);
-    scene.classList.remove('out');
+    isOut=false;peak=0;blowStart=0;above=0;
+    lean.style.opacity='1';setFlame(0);scene.classList.remove('out');
     smokes.forEach(s=>s.classList.remove('go'));
-    cap.innerHTML=(mode==='mic')?'吹いてください。<small>消えないときは感度を上げてください。</small>'
-                                :'ボタンを押し続けてください。';
+    cap.innerHTML='吹いてください。<small>一瞬で消えるなら感度を下げてください。</small>';
     mainBtn.hidden=(mode==='mic');
-    if(mode!=='mic') mainBtn.textContent='押し続ける';
   }
-
   function readRMS(){
-    if(analyser.getFloatTimeDomainData){
-      analyser.getFloatTimeDomainData(td);
-      let s=0; for(let i=0;i<td.length;i++) s+=td[i]*td[i];
-      return Math.sqrt(s/td.length);
-    }
-    const b=new Uint8Array(analyser.fftSize);
-    analyser.getByteTimeDomainData(b);
-    let s=0; for(let i=0;i<b.length;i++){ const v=(b[i]-128)/128; s+=v*v; }
-    return Math.sqrt(s/b.length);
+    if(analyser.getFloatTimeDomainData){analyser.getFloatTimeDomainData(td);
+      let s=0;for(let i=0;i<td.length;i++)s+=td[i]*td[i];return Math.sqrt(s/td.length);}
+    const b=new Uint8Array(analyser.fftSize);analyser.getByteTimeDomainData(b);
+    let s=0;for(let i=0;i<b.length;i++){const v=(b[i]-128)/128;s+=v*v;}return Math.sqrt(s/b.length);
   }
 
   async function startMic(){
-    try{
-      if(!ctx) ctx=new (window.AudioContext||window.webkitAudioContext)();
-      ctx.resume();
-    }catch(e){ log('AudioContext失敗',true); }
-    if(!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)){ failMic({name:'Unsupported'}); return; }
+    try{ if(!ctx)ctx=new (window.AudioContext||window.webkitAudioContext)(); ctx.resume(); }catch(e){}
+    if(!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)){cap.innerHTML='この環境ではマイクを使えません。';return;}
     cap.innerHTML='マイクの使用を許可してください。';
     const ask=navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
-    const to=new Promise((_,rej)=>setTimeout(()=>rej({name:'TimeoutError'}),10000));
-    try{ stream=await Promise.race([ask,to]); }
-    catch(e){ log('マイク失敗: '+(e&&e.name),true); failMic(e); return; }
+    const to=new Promise((_,r)=>setTimeout(()=>r({name:'TimeoutError'}),10000));
+    try{ stream=await Promise.race([ask,to]); log('マイク取得に成功',true); }
+    catch(e){ log('失敗: '+(e&&e.name),true); cap.innerHTML='マイクを使えませんでした。'; mainBtn.hidden=false; return; }
     try{ await ctx.resume(); }catch(e){}
-
     const src=ctx.createMediaStreamSource(stream);
-    analyser=ctx.createAnalyser();
-    analyser.fftSize=2048; analyser.smoothingTimeConstant=0;
+    analyser=ctx.createAnalyser();analyser.fftSize=2048;analyser.smoothingTimeConstant=0;
     src.connect(analyser);
-    sink=ctx.createGain(); sink.gain.value=0;
-    analyser.connect(sink); sink.connect(ctx.destination);
+    const g=ctx.createGain();g.gain.value=0;analyser.connect(g);g.connect(ctx.destination);
     td=new Float32Array(analyser.fftSize);
-
-    mode='mic'; mainBtn.hidden=true;
-    altBtn.hidden=false; altBtn.textContent='測定モード';
-    meterwrap.classList.add('show'); tune.classList.add('show');
-
-    calibrating=true; calSum=0; calN=0;
+    mode='mic';mainBtn.hidden=true;altBtn.hidden=false;
+    meterwrap.classList.add('show');tuneS.classList.add('show');tuneD.classList.add('show');
+    calibrating=true;calSum=0;calN=0;
     cap.innerHTML='周囲の音を測っています。<small>2秒ほどそのままで。</small>';
-    setTimeout(()=>{
-      floor=calN?Math.max(calSum/calN,0.0003):0.0008;
-      calibrating=false;
+    setTimeout(()=>{floor=calN?Math.max(calSum/calN,0.0003):0.0008;calibrating=false;showSens();
       log('環境音の基準: '+floor.toFixed(5));
-      cap.innerHTML='吹いてください。<small>消えないときは感度を上げてください。</small>';
-    },2000);
-    lastT=performance.now(); loop();
+      cap.innerHTML='吹いてください。<small>一瞬で消えるなら感度を下げてください。</small>';},2000);
+    lastT=performance.now();loop();
   }
 
-  function failMic(e){
-    const n=e&&e.name||'';
-    let why='マイクを使えませんでした。';
-    if(n==='NotAllowedError') why='マイクの使用が許可されませんでした。';
-    else if(n==='TimeoutError') why='応答がありませんでした。';
-    cap.innerHTML=why;
-    mainBtn.hidden=false; mainBtn.textContent='もう一度マイクを試す';
-  }
-
-  // ================= 測定モード =================
-  const SOURCES=[
-    {key:'息',    label:'息を吹きかける',   hint:'いつもの強さで、3回ほど吹いてください'},
-    {key:'声',    label:'普通に話す',       hint:'ふだんの声量で話し続けてください'},
-    {key:'拍手',  label:'手を叩く',         hint:'数回、普通の強さで叩いてください'},
-    {key:'環境音',label:'何もしない',       hint:'そのまま置いて待ってください'}
-  ];
-  let measuring=false, mIndex=-1, mPeak=0, mSum=0, mN=0, mEnd=0;
-  const results={};
-
+  // ---- 測定モード ----
+  const SRC=[{k:'息',l:'息を吹きかける',h:'本番と同じ距離・強さで3回'},
+             {k:'声',l:'普通に話す',h:'ふだんの声量で話し続ける'},
+             {k:'拍手',l:'手を叩く',h:'普通の強さで数回'},
+             {k:'環境音',l:'何もしない',h:'そのまま置いて待つ'}];
+  let measuring=false,mi=-1,mPeak=0,mEnd=0;const res={};
   function startMeasure(){
-    if(!analyser){ cap.innerHTML='先にマイクを有効にしてください。'; return; }
-    measuring=true; mIndex=-1;
-    tune.classList.remove('show');
-    altBtn.textContent='測定をやめる';
-    nextSource();
+    if(!analyser){cap.innerHTML='先にマイクを有効にしてください。';return;}
+    measuring=true;mi=-1;tuneS.classList.remove('show');tuneD.classList.remove('show');
+    altBtn.textContent='測定をやめる';next();
   }
-  function nextSource(){
-    mIndex++;
-    if(mIndex>=SOURCES.length){ finishMeasure(); return; }
-    const s=SOURCES[mIndex];
-    mPeak=0; mSum=0; mN=0;
-    cap.innerHTML='【'+(mIndex+1)+'/4】'+s.label+'<small>'+s.hint+'</small>';
-    mainBtn.hidden=false; mainBtn.textContent='5秒 測る';
+  function next(){
+    mi++; if(mi>=SRC.length){done();return;}
+    mPeak=0;cap.innerHTML='【'+(mi+1)+'/4】'+SRC[mi].l+'<small>'+SRC[mi].h+'</small>';
+    mainBtn.hidden=false;mainBtn.textContent='5秒 測る';
   }
-  function runSource(){
-    const s=SOURCES[mIndex];
-    mainBtn.hidden=true;
-    mEnd=performance.now()+5000;
-    cap.innerHTML='測定中：'+s.label+'<small>あと5秒</small>';
-  }
-  function finishMeasure(){
-    measuring=false;
-    altBtn.textContent='測定モード';
-    tune.classList.add('show');
-    const b=results['息']||{peak:0,avg:0};
-    const noise=Math.max(results['声']?results['声'].peak:0,
-                         results['拍手']?results['拍手'].peak:0,
-                         results['環境音']?results['環境音'].peak:0);
+  function done(){
+    measuring=false;altBtn.textContent='測定モード';
+    tuneS.classList.add('show');tuneD.classList.add('show');
     log('──── 測定結果 ────',true);
-    SOURCES.forEach(s=>{
-      const r=results[s.key];
-      if(r) log(s.key+'：最大 '+r.peak.toFixed(4)+' ／ 平均 '+r.avg.toFixed(4));
-    });
-    const gap=noise>0 ? (b.peak/noise) : 99;
-    log('息と他の音の差：'+gap.toFixed(1)+'倍', true);
-    let advice='';
-    if(b.peak<=0){ advice='息が測れていません。'; }
+    SRC.forEach(s=>{ if(res[s.k]!==undefined) log(s.k+'：最大 '+res[s.k].toFixed(4)); });
+    const b=res['息']||0;
+    const noise=Math.max(res['声']||0,res['拍手']||0,res['環境音']||0);
+    const gap=noise>0?b/noise:99;
+    log('息と他の音の差：'+gap.toFixed(1)+'倍',true);
+    if(b<=0){ log('息が測れていません',true); }
     else if(gap>=3){
-      const rec=Math.sqrt(b.peak*noise);
-      advice='しきい値 '+rec.toFixed(4)+' 前後で分離できます。';
-      log('推奨しきい値：'+rec.toFixed(4)+'（息と他の音の中間）',true);
-      const s=Math.round(11-(rec-0.0012)/0.0030);
-      log('感度スライダーの目安：'+Math.max(1,Math.min(10,s)),true);
-    }else if(gap>=1.5){
-      advice='差が小さいので、吹き続ける時間を長くして分離してください。';
-      log('推奨：吹き続ける時間を 600ms 以上に',true);
-    }else{
-      advice='息と他の音が同程度です。音量だけでの判別は困難です。';
-      log('音量だけでは分離できません',true);
-    }
-    cap.innerHTML='測定が終わりました。<small>'+advice+'下のログを見てください。</small>';
-    mainBtn.hidden=false; mainBtn.textContent='ロウソクに戻る';
+      const rec=Math.sqrt(b*noise);
+      log('推奨しきい値：'+rec.toFixed(4),true);
+      let best=5,bd=9e9;
+      for(let s=1;s<=10;s++){const v=0.0015*Math.pow(100,(10-s)/9);if(Math.abs(v-rec)<bd){bd=Math.abs(v-rec);best=s;}}
+      log('感度スライダーの目安：'+best,true);
+      sens.value=best;showSens();
+    }else if(gap>=1.5){ log('差が小さい。吹く長さを0.6秒以上に',true); }
+    else{ log('音量だけでは分離できません',true); }
+    cap.innerHTML='測定が終わりました。<small>下のログを見てください。</small>';
+    mainBtn.hidden=false;mainBtn.textContent='ロウソクに戻る';
   }
 
   function loop(){
     raf=requestAnimationFrame(loop);
-    const now=performance.now(); const dt=now-lastT; lastT=now;
+    const now=performance.now(),dt=now-lastT;lastT=now;
     const rms=readRMS();
-
-    if(calibrating){ calSum+=rms; calN++; fill.style.width='0%'; return; }
-
+    if(calibrating){calSum+=rms;calN++;return;}
     if(measuring){
-      if(mEnd && now<mEnd){
-        mPeak=Math.max(mPeak,rms); mSum+=rms; mN++;
+      if(mEnd&&now<mEnd){
+        mPeak=Math.max(mPeak,rms);
         fill.style.width=(Math.min(1,rms/0.3)*100).toFixed(1)+'%';
-        rLeft.textContent=SOURCES[mIndex].key;
+        rLeft.textContent=SRC[mi].k;
         rRight.textContent='最大 '+mPeak.toFixed(4)+'　あと'+Math.ceil((mEnd-now)/1000)+'秒';
         setFlame(Math.min(1.2,rms*4));
       }else if(mEnd){
-        results[SOURCES[mIndex].key]={peak:mPeak, avg:mN?mSum/mN:0};
-        log(SOURCES[mIndex].key+'：最大 '+mPeak.toFixed(4));
-        mEnd=0; setFlame(0); nextSource();
+        res[SRC[mi].k]=mPeak;log(SRC[mi].k+'：最大 '+mPeak.toFixed(4));
+        mEnd=0;setFlame(0);next();
       }
       return;
     }
-
     const th=thresh();
     fill.style.width=(Math.min(1,rms/(th*2))*100).toFixed(1)+'%';
     peak=Math.max(peak,rms);
-    rLeft.textContent='環境音 '+floor.toFixed(4)+'／必要 '+(SUSTAIN/1000).toFixed(2)+'秒';
+    rLeft.textContent='環境音 '+floor.toFixed(4);
     rRight.textContent=rms.toFixed(4)+' / '+th.toFixed(4)+'（最大 '+peak.toFixed(4)+'）';
-
-    if(isOut) return;
+    if(isOut)return;
     if(rms>th){
-      if(!blowStart) blowStart=now;
-      above+=dt;
-      setFlame(0.35+(rms/th-1)*0.25+above/SUSTAIN*0.5);
-      if(above>=SUSTAIN) extinguish(now-blowStart);
+      if(!blowStart)blowStart=now;
+      above+=dt;setFlame(0.3+(rms/th-1)*0.15+above/SUSTAIN*0.6);
+      if(above>=SUSTAIN)extinguish(now-blowStart);
     }else{
       above=Math.max(0,above-dt*1.6);
-      if(above<=0) blowStart=0;
-      setFlame(above/SUSTAIN*0.35);
+      if(above<=0)blowStart=0;
+      setFlame(above/SUSTAIN*0.3);
     }
   }
 
-  // 吹き続ける時間のスライダー
-  const dur=document.createElement('div');
-  dur.className='tune show';
-  dur.innerHTML='<span>吹く長さ</span><input type="range" id="durr" min="150" max="1200" step="50" value="350"><span id="durv">0.35秒</span>';
-  tune.parentNode.insertBefore(dur, tune.nextSibling);
-  dur.querySelector('#durr').addEventListener('input',e=>{
-    SUSTAIN=+e.target.value;
-    dur.querySelector('#durv').textContent=(SUSTAIN/1000).toFixed(2)+'秒';
-  });
-
   mainBtn.addEventListener('click',()=>{
-    if(measuring){
-      if(mainBtn.textContent==='ロウソクに戻る'){ measuring=false; relight(); return; }
-      runSource(); return;
-    }
+    if(measuring){ mEnd=performance.now()+5000; mainBtn.hidden=true;
+      cap.innerHTML='測定中：'+SRC[mi].l+'<small>5秒</small>'; return; }
     if(mainBtn.textContent==='ロウソクに戻る'){ relight(); return; }
     if(isOut){ relight(); return; }
     startMic();
   });
   altBtn.addEventListener('click',()=>{
-    if(measuring){ measuring=false; altBtn.textContent='測定モード'; tune.classList.add('show'); relight(); }
+    if(measuring){ measuring=false;altBtn.textContent='測定モード';
+      tuneS.classList.add('show');tuneD.classList.add('show');relight(); }
     else startMeasure();
   });
-
   setFlame(0);
 })();
 </script>
